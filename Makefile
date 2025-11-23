@@ -10,8 +10,10 @@ deploy: build
 
 # Run bootstrap script
 bootstrap:
-	chmod +x infra/bootstrap.sh
-	infra/bootstrap.sh
+	@if command -v chmod >/dev/null 2>&1; then \
+		chmod +x infra/bootstrap.sh; \
+	fi
+	bash infra/bootstrap.sh
 
 # Run tests
 test:
@@ -54,6 +56,23 @@ test-agent:
 outputs:
 	aws cloudformation describe-stacks --stack-name stox-ai-demo --region us-east-1 --query 'Stacks[0].Outputs' --output table
 
+# Local development
+local-start:
+	cd infra && sam local start-api --port 3000 --env-vars ../sam-env.json
+
+local-ingest:
+	cd infra && sam local invoke StoxIngestFunction --event ../test-payload.json --env-vars ../sam-env.json
+
+local-agent:
+	cd infra && sam local invoke StoxAgentFunction --event ../agent-payload.json --env-vars ../sam-env.json
+
+local-maint:
+	cd infra && sam local invoke StoxMaintFunction --event ../maint-event.json --env-vars ../sam-env.json
+
+# Local web interface
+local-web:
+	python -m http.server 8000 --directory web
+
 # Help
 help:
 	@echo "Available targets:"
@@ -67,4 +86,11 @@ help:
 	@echo "  test-ingest - Test ingestion function"
 	@echo "  test-agent  - Test agent function"
 	@echo "  outputs     - Show stack outputs"
-	@echo "  help        - Show this help"
+	@echo ""
+	@echo "Local Development:"
+	@echo "  local-start   - Start local API Gateway on port 3000"
+	@echo "  local-ingest  - Test ingestion function locally"
+	@echo "  local-agent   - Test agent function locally"
+	@echo "  local-maint   - Test maintenance function locally"
+	@echo "  local-web     - Serve web interface on port 8000"
+	@echo "  help          - Show this help"

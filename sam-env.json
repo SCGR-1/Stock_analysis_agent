@@ -1,0 +1,19 @@
+{
+  "stox-ingest": {
+    "ALPHAVANTAGE_API_KEY": "7X679YIWW7X4EBLA",
+    "CURATED_BUCKET": "stox-curated-demo-852902711883",
+    "WATCHLIST": "AAPL,MSFT,AMZN,GOOGL,TSLA",
+    "ATHENA_DB": "stox",
+    "ATHENA_OUTPUT": "s3://stox-athena-demo-852902711883/",
+    "BEDROCK_REGION": "us-east-1"
+  },
+  "stox-agent": {
+    "ATHENA_DB": "stox",
+    "ATHENA_OUTPUT": "s3://stox-athena-demo-852902711883/",
+    "BEDROCK_REGION": "us-east-1"
+  },
+  "stox-maint": {
+    "ATHENA_DB": "stox",
+    "ATHENA_OUTPUT": "s3://stox-athena-demo-852902711883/"
+  }
+}

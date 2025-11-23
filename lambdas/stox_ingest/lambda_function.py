@@ -42,7 +42,7 @@ def fetch_stock_data(ticker: str, api_key: str) -> Dict[str, Any]:
     
     url = f"https://www.alphavantage.co/query"
     params = {
-        'function': 'TIME_SERIES_DAILY_ADJUSTED',
+        'function': 'TIME_SERIES_DAILY',
         'symbol': ticker,
         'apikey': api_key,
         'outputsize': 'compact'
@@ -72,7 +72,7 @@ def fetch_stock_data(ticker: str, api_key: str) -> Dict[str, Any]:
         'low': float(latest_data['3. low']),
         'close': float(latest_data['4. close']),
         'volume': int(latest_data['5. volume']),
-        'adj_close': float(latest_data['5. adjusted close'])
+        'adj_close': float(latest_data['4. close'])  # Use close as adj_close for free endpoint
     }
 
 def write_to_s3(data: Dict[str, Any], ticker: str, bucket: str) -> str:

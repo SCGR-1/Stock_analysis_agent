@@ -124,8 +124,10 @@
     </div>
 
     <script>
-        // Replace with your actual API URL after deployment
-        const API_URL = 'https://YOUR_API_ID.execute-api.us-east-1.amazonaws.com/prod/chat';
+        // API URL - change this for local development
+        const API_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3000/chat'  // Local development
+            : 'https://dw0ry2vj4m.execute-api.us-east-1.amazonaws.com/prod/chat';  // Production
         
         function setQuestion(question) {
             document.getElementById('questionInput').value = question;

@@ -1,0 +1,1 @@
+{"statusCode": 500, "body": "{\"error\": \"An error occurred (InvalidRequestException) when calling the StartQueryExecution operation: Unable to verify/create output bucket stox-athena-demo-852902711883\"}"}

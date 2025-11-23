@@ -4,30 +4,58 @@ import boto3
 import re
 from typing import Dict, Any, List
 
-bedrock_client = boto3.client('bedrock-runtime', region_name=os.environ['BEDROCK_REGION'])
-athena_client = boto3.client('athena')
+def get_bedrock_client():
+    return boto3.client('bedrock-runtime', region_name=os.environ['BEDROCK_REGION'])
+
+def get_athena_client():
+    return boto3.client('athena')
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """AI agent that converts natural language to SQL and executes it"""
     
+    print(f"DEBUG: Received event: {json.dumps(event)}")
+    print(f"DEBUG: Context: {context}")
+    
+    # Check environment variables
+    print(f"DEBUG: Environment variables:")
+    print(f"  ATHENA_DB: {os.environ.get('ATHENA_DB', 'NOT_SET')}")
+    print(f"  ATHENA_OUTPUT: {os.environ.get('ATHENA_OUTPUT', 'NOT_SET')}")
+    print(f"  BEDROCK_REGION: {os.environ.get('BEDROCK_REGION', 'NOT_SET')}")
+    
     try:
-        body = json.loads(event.get('body', '{}'))
+        print("DEBUG: Starting request processing")
+        
+        # Parse the request body
+        body_str = event.get('body', '{}')
+        print(f"DEBUG: Raw body: {body_str}")
+        
+        body = json.loads(body_str)
+        print(f"DEBUG: Parsed body: {body}")
+        
         question = body.get('question', '')
+        print(f"DEBUG: Question: {question}")
         
         if not question:
+            print("DEBUG: No question provided")
             return {
                 'statusCode': 400,
                 'body': json.dumps({'error': 'Question is required'})
             }
         
+        print("DEBUG: Generating SQL using Bedrock")
         # Generate SQL using Bedrock
         sql = generate_sql(question)
+        print(f"DEBUG: Generated SQL: {sql}")
         
+        print("DEBUG: Executing SQL in Athena")
         # Execute SQL in Athena
         columns, rows = execute_athena_query(sql)
+        print(f"DEBUG: Query results - Columns: {columns}, Rows: {len(rows)}")
         
+        print("DEBUG: Summarizing results using Bedrock")
         # Summarize results using Bedrock
         answer = summarize_results(question, columns, rows)
+        print(f"DEBUG: Generated answer: {answer}")
         
         return {
             'statusCode': 200,
@@ -45,14 +73,17 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         }
         
     except Exception as e:
-        print(f"Error: {str(e)}")
+        print(f"ERROR: {str(e)}")
+        print(f"ERROR: Exception type: {type(e)}")
+        import traceback
+        print(f"ERROR: Traceback: {traceback.format_exc()}")
         return {
             'statusCode': 500,
             'headers': {
                 'Content-Type': 'application/json',
                 'Access-Control-Allow-Origin': '*'
             },
-            'body': json.dumps({'error': str(e)})
+            'body': json.dumps({'error': str(e), 'type': str(type(e))})
         }
 
 def generate_sql(question: str) -> str:
@@ -70,7 +101,7 @@ Q: "Max drawdown of TSLA YTD"
 A: <SQL>WITH running_peak AS (SELECT date, close, MAX(close) OVER (ORDER BY date) as peak FROM stox.prices WHERE ticker='TSLA' AND date >= date_trunc('year', current_date)) SELECT MIN((close - peak) / peak) as max_drawdown FROM running_peak;</SQL>
 """
     
-    prompt = f"""You are a SQL expert. Convert the natural language question to SQL for Athena against the stox.prices table.
+    prompt = f"""\n\nHuman: You are a SQL expert. Convert the natural language question to SQL for Athena against the stox.prices table.
 
 Table schema:
 - date DATE
@@ -90,20 +121,29 @@ Rules:
 5. Use proper Athena SQL syntax
 6. Add LIMIT 200 to prevent large result sets
 
-SQL:"""
+SQL:
+
+\n\nAssistant:"""
     
+    bedrock_client = get_bedrock_client()
     response = bedrock_client.invoke_model(
         modelId='anthropic.claude-3-haiku-20240307-v1:0',
         body=json.dumps({
-            'prompt': prompt,
-            'max_tokens_to_sample': 500,
+            'anthropic_version': 'bedrock-2023-05-31',
+            'messages': [
+                {
+                    'role': 'user',
+                    'content': prompt
+                }
+            ],
+            'max_tokens': 500,
             'temperature': 0
         }),
         contentType='application/json'
     )
     
     response_body = json.loads(response['body'].read())
-    sql_text = response_body['completion']
+    sql_text = response_body['content'][0]['text']
     
     # Extract SQL from <SQL> tags
     sql_match = re.search(r'<SQL>(.*?)</SQL>', sql_text, re.DOTALL)
@@ -118,6 +158,7 @@ def execute_athena_query(sql: str) -> tuple[List[str], List[List[Any]]]:
     athena_db = os.environ['ATHENA_DB']
     athena_output = os.environ['ATHENA_OUTPUT']
     
+    athena_client = get_athena_client()
     # Start query execution
     response = athena_client.start_query_execution(
         QueryString=sql,
@@ -176,24 +217,33 @@ def summarize_results(question: str, columns: List[str], rows: List[List[Any]]) 
     for i, row in enumerate(rows[:3]):
         data_summary += f"Row {i+1}: {dict(zip(columns, row))}\n"
     
-    prompt = f"""Summarize the following SQL query results in 2-3 sentences. If the data appears to be time series, suggest a chart mapping (x-axis, y-axis, series) in plain words.
+    prompt = f"""\n\nHuman: Summarize the following SQL query results in 2-3 sentences. If the data appears to be time series, suggest a chart mapping (x-axis, y-axis, series) in plain words.
 
 Original question: {question}
 
 Query results:
 {data_summary}
 
-Provide a concise summary and chart suggestion if applicable:"""
+Provide a concise summary and chart suggestion if applicable:
+
+\n\nAssistant:"""
     
+    bedrock_client = get_bedrock_client()
     response = bedrock_client.invoke_model(
         modelId='anthropic.claude-3-haiku-20240307-v1:0',
         body=json.dumps({
-            'prompt': prompt,
-            'max_tokens_to_sample': 300,
+            'anthropic_version': 'bedrock-2023-05-31',
+            'messages': [
+                {
+                    'role': 'user',
+                    'content': prompt
+                }
+            ],
+            'max_tokens': 300,
             'temperature': 0.3
         }),
         contentType='application/json'
     )
     
     response_body = json.loads(response['body'].read())
-    return response_body['completion'].strip()
+    return response_body['content'][0]['text'].strip()

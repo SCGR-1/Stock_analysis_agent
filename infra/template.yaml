@@ -63,7 +63,7 @@ Resources:
           - Effect: Allow
             Principal: '*'
             Action: s3:GetObject
-            Resource: !Sub '${SiteBucket}/*'
+            Resource: !Sub 'arn:aws:s3:::${SiteBucket}/*'
 
   LambdaExecutionRole:
     Type: AWS::IAM::Role
@@ -89,10 +89,10 @@ Resources:
                   - s3:PutObject
                   - s3:ListBucket
                 Resource:
-                  - !Sub '${CuratedBucket}/*'
-                  - !Sub '${CuratedBucket}'
-                  - !Sub '${AthenaResultsBucket}/*'
-                  - !Sub '${AthenaResultsBucket}'
+                  - !Sub 'arn:aws:s3:::${CuratedBucket}/*'
+                  - !Sub 'arn:aws:s3:::${CuratedBucket}'
+                  - !Sub 'arn:aws:s3:::${AthenaResultsBucket}/*'
+                  - !Sub 'arn:aws:s3:::${AthenaResultsBucket}'
               - Effect: Allow
                 Action:
                   - athena:StartQueryExecution
@@ -107,7 +107,9 @@ Resources:
               - Effect: Allow
                 Action:
                   - bedrock:InvokeModel
-                Resource: !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/anthropic.claude-3-haiku-20240307-v1:0'
+                Resource: 
+                  - !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/anthropic.claude-3-haiku-20240307-v1:0'
+                  - !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/anthropic.claude-instant-v1:2:100k'
 
   StoxIngestFunction:
     Type: AWS::Serverless::Function

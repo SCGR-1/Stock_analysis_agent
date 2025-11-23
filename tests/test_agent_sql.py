@@ -42,35 +42,44 @@ class TestStoxAgent:
         body = json.loads(result['body'])
         assert 'error' in body
     
-    @patch('lambdas.stox_agent.lambda_function.bedrock_client')
-    def test_generate_sql_success(self, mock_bedrock):
+    @patch('lambdas.stox_agent.lambda_function.get_bedrock_client')
+    def test_generate_sql_success(self, mock_get_bedrock):
         """Test SQL generation from natural language"""
         mock_response = MagicMock()
         mock_response['body'].read.return_value = json.dumps({
             'completion': 'Here is the SQL: <SQL>SELECT * FROM stox.prices WHERE ticker=\'AAPL\' LIMIT 10</SQL>'
         }).encode()
+        mock_bedrock = MagicMock()
         mock_bedrock.invoke_model.return_value = mock_response
+        mock_get_bedrock.return_value = mock_bedrock
         
         result = generate_sql('Show me AAPL data')
         
         assert result == "SELECT * FROM stox.prices WHERE ticker='AAPL' LIMIT 10"
     
-    @patch('lambdas.stox_agent.lambda_function.bedrock_client')
-    def test_generate_sql_no_sql_tags(self, mock_bedrock):
+    @patch('lambdas.stox_agent.lambda_function.get_bedrock_client')
+    def test_generate_sql_no_sql_tags(self, mock_get_bedrock):
         """Test handling when no SQL tags are found"""
         mock_response = MagicMock()
         mock_response['body'].read.return_value = json.dumps({
             'completion': 'I cannot generate SQL for this question.'
         }).encode()
+        mock_bedrock = MagicMock()
         mock_bedrock.invoke_model.return_value = mock_response
+        mock_get_bedrock.return_value = mock_bedrock
         
         with pytest.raises(Exception, match="No SQL found in response"):
             generate_sql('Invalid question')
     
-    @patch('lambdas.stox_agent.lambda_function.athena_client')
-    def test_execute_athena_query_success(self, mock_athena):
+    @patch.dict('os.environ', {
+        'ATHENA_DB': 'stox',
+        'ATHENA_OUTPUT': 's3://test-bucket/'
+    })
+    @patch('lambdas.stox_agent.lambda_function.get_athena_client')
+    def test_execute_athena_query_success(self, mock_get_athena):
         """Test successful Athena query execution"""
         # Mock start query execution
+        mock_athena = MagicMock()
         mock_athena.start_query_execution.return_value = {
             'QueryExecutionId': 'test-query-id'
         }
@@ -97,15 +106,21 @@ class TestStoxAgent:
                 ]
             }
         }
+        mock_get_athena.return_value = mock_athena
         
         columns, rows = execute_athena_query("SELECT * FROM stox.prices LIMIT 1")
         
         assert columns == ['date', 'close']
         assert rows == [['2024-01-15', '100.0']]
     
-    @patch('lambdas.stox_agent.lambda_function.athena_client')
-    def test_execute_athena_query_failure(self, mock_athena):
+    @patch.dict('os.environ', {
+        'ATHENA_DB': 'stox',
+        'ATHENA_OUTPUT': 's3://test-bucket/'
+    })
+    @patch('lambdas.stox_agent.lambda_function.get_athena_client')
+    def test_execute_athena_query_failure(self, mock_get_athena):
         """Test Athena query failure handling"""
+        mock_athena = MagicMock()
         mock_athena.start_query_execution.return_value = {
             'QueryExecutionId': 'test-query-id'
         }
@@ -118,18 +133,21 @@ class TestStoxAgent:
                 }
             }
         }
+        mock_get_athena.return_value = mock_athena
         
         with pytest.raises(Exception, match="Athena query failed"):
             execute_athena_query("INVALID SQL")
     
-    @patch('lambdas.stox_agent.lambda_function.bedrock_client')
-    def test_summarize_results(self, mock_bedrock):
+    @patch('lambdas.stox_agent.lambda_function.get_bedrock_client')
+    def test_summarize_results(self, mock_get_bedrock):
         """Test result summarization"""
         mock_response = MagicMock()
         mock_response['body'].read.return_value = json.dumps({
             'completion': 'The data shows AAPL closed at $100 on 2024-01-15. This represents a typical trading day.'
         }).encode()
+        mock_bedrock = MagicMock()
         mock_bedrock.invoke_model.return_value = mock_response
+        mock_get_bedrock.return_value = mock_bedrock
         
         result = summarize_results(
             'Show me AAPL price',

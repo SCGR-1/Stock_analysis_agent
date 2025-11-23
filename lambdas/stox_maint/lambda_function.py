@@ -3,7 +3,8 @@ import os
 import boto3
 from typing import Dict, Any
 
-athena_client = boto3.client('athena')
+def get_athena_client():
+    return boto3.client('athena')
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Weekly maintenance tasks for stock data"""
@@ -42,6 +43,7 @@ def repair_table(athena_db: str, athena_output: str) -> Dict[str, Any]:
     
     sql = "MSCK REPAIR TABLE stox.prices"
     
+    athena_client = get_athena_client()
     response = athena_client.start_query_execution(
         QueryString=sql,
         QueryExecutionContext={'Database': athena_db},
@@ -85,6 +87,7 @@ def compact_to_parquet(athena_db: str, athena_output: str) -> Dict[str, Any]:
     WHERE date >= current_date - interval '90' day
     """
     
+    athena_client = get_athena_client()
     response = athena_client.start_query_execution(
         QueryString=sql,
         QueryExecutionContext={'Database': athena_db},

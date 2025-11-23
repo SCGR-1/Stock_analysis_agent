@@ -1,0 +1,8 @@
+{
+  "httpMethod": "POST",
+  "path": "/chat",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": "{\"question\": \"Show me AAPL price for last 7 days\"}"
+}

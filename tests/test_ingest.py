@@ -91,5 +91,5 @@ class TestStoxIngest:
         call_args = mock_s3.put_object.call_args
         assert call_args[1]['Bucket'] == 'test-bucket'
         assert call_args[1]['Key'] == expected_key
-        assert 'Content-Type' in call_args[1]
-        assert 'text/csv' in call_args[1]['Body']
+        assert call_args[1]['ContentType'] == 'text/csv'
+        assert 'date,open,high,low,close,volume,adj_close' in call_args[1]['Body']
