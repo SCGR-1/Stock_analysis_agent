@@ -1,6 +1,6 @@
 {
   "stox-ingest": {
-    "ALPHAVANTAGE_API_KEY": "7X679YIWW7X4EBLA",
+    "ALPHAVANTAGE_API_KEY": "YOUR_API_KEY_HERE",
     "CURATED_BUCKET": "stox-curated-demo-852902711883",
     "WATCHLIST": "AAPL,MSFT,AMZN,GOOGL,TSLA",
     "ATHENA_DB": "stox",
@@ -17,3 +17,4 @@
     "ATHENA_OUTPUT": "s3://stox-athena-demo-852902711883/"
   }
 }
+

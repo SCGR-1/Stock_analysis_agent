@@ -45,3 +45,9 @@ Thumbs.db
 # Temporary files
 /tmp/
 *.tmp
+
+# Environment files with secrets
+sam-env.json
+env-vars.json
+.env.local
+.env
